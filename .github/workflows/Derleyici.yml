@@ -1,62 +1,61 @@
-# Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
-name: CloudStream Derleyici.
+name: CloudStream Derleyici
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - master
+    branches: [ main ]
     paths-ignore:
       - "**/*.md"
       - "**/*.yml"
-      - "**/*.jpg"
       - "**/*.png"
+      - "**/*.jpg"
       - "**/*.py"
 
 jobs:
-  CloudStreamDerleyici:
+  Derleme:
     runs-on: ubuntu-latest
+
     steps:
-      - name: "'src' Depo Kontrolü"
-        uses: actions/checkout@v4.2.2
+      - name: Kaynak Kodunu Al
+        uses: actions/checkout@v4
         with:
-          path: "src"
+          path: src
 
-      - name: "'build' Depo Kontrolü"
-        uses: actions/checkout@v4.2.2
+      - name: Build Branch'ini Al
+        uses: actions/checkout@v4
         with:
-          ref: "builds"
-          path: "builds"
+          ref: builds
+          path: builds
 
-      - name: Eski Derlemeleri Temizle
-        run: rm $GITHUB_WORKSPACE/builds/*.cs3 || true
+      - name: Eski Dosyaları Temizle
+        run: rm -f builds/*.cs3 builds/plugins.json || true
 
-      - name: JDK 17 Ayarla
-        uses: actions/setup-java@v4.6.0
+      - name: Java 17 Kur
+        uses: actions/setup-java@v4
         with:
-          distribution: adopt
+          distribution: temurin
           java-version: 17
 
-      - name: Android SDK Ayarla
-        uses: android-actions/setup-android@v3.2.2
+      - name: Android SDK Kur
+        uses: android-actions/setup-android@v3
 
       - name: Eklentileri Derle
         run: |
-          cd $GITHUB_WORKSPACE/src
+          cd src
           chmod +x gradlew
           ./gradlew make makePluginsJson
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
-          cp build/plugins.json $GITHUB_WORKSPACE/builds
+          cp **/build/*.cs3 ../builds || true
+          cp build/plugins.json ../builds || true
 
-      # - name: Derlemeleri Yükle
-      #   run: |
-      #     cd $GITHUB_WORKSPACE/builds
-      #     git config --local user.email "actions@github.com"
-      #     git config --local user.name "GitHub Actions"
-      #     git add .
-      #     git commit --amend -m "$GITHUB_SHA 'nın Derlenmesi" || exit 0   # eğer commit edilecek bir şey yoksa hata verme
-      #     git push --force
+      - name: Build Dosyalarını Commit & Pushla
+        run: |
+          cd builds
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "🔄 Otomatik Derleme - $GITHUB_SHA" || exit 0
+          git push
